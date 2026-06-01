@@ -63,51 +63,68 @@ export function witterungFactor(keys = [], cfg) {
 
 // "HH:MM" + Dezimalstunden -> "HH:MM" (tagesüberlauf-sicher)
 export function addHours(hhmm, hours) {
+  if (!Number.isFinite(hours)) return '–';
   const [h, m] = hhmm.split(':').map(Number);
   let t = h * 60 + m + Math.round(hours * 60);
   t = ((t % 1440) + 1440) % 1440;
   return `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`;
 }
 
-// Dezimalstunden -> "h:mm"
+// Dezimalstunden -> "h:mm" (non-finite -> sichtbarer Platzhalter statt verstecktem 0:00)
 export function formatHM(hours) {
-  const t = Math.round((hours || 0) * 60);
+  if (!Number.isFinite(hours)) return '–';
+  const t = Math.round(Math.max(0, hours) * 60);
   return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
 }
 
 export function computeTour(input = {}) {
   const cfg = mergeConfig(DEFAULTS, input.config || {});
-  const base = input.useSac
+  // Eingaben robust machen: nn = nicht-negativ (0 bei NaN/negativ); sp = positiv (Default-Fallback)
+  const nn = (v) => { const n = Number(v); return Number.isFinite(n) && n > 0 ? n : 0; };
+  const sp = (v, d) => { const n = Number(v); return Number.isFinite(n) && n > 0 ? n : d; };
+
+  const rawBase = input.useSac
     ? { vAuf: cfg.sac.vAuf, vAb: cfg.sac.vAb, vHoriz: cfg.sac.vHoriz, vSki: cfg.speeds.vSki }
     : cfg.speeds;
+  const base = {
+    vAuf: sp(rawBase.vAuf, DEFAULTS.speeds.vAuf),
+    vAb: sp(rawBase.vAb, DEFAULTS.speeds.vAb),
+    vHoriz: sp(rawBase.vHoriz, DEFAULTS.speeds.vHoriz),
+    vSki: sp(rawBase.vSki, DEFAULTS.speeds.vSki),
+  };
 
   const isSki = input.aktivitaet === 'skitour';
   const vAb = isSki ? base.vSki : base.vAb;
 
-  const hmAuf = input.hmAuf || 0;
-  const hmAb = input.hmAb || 0;
-  const distAufKm = input.distAufKm || 0;
-  const distAbKm = input.distAbKm || 0;
-
-  // Komponenten-Zeiten (roh)
-  const tAuf = hmAuf / base.vAuf;
-  const tAb = hmAb / vAb;
-  const tHorizAuf = distAufKm / base.vHoriz;
-  const tHorizAb = distAbKm / base.vHoriz;
-
-  // komponentenspezifische Faktoren
-  const wf = weightFactors(input.gewichtKg ?? cfg.weight.basislast, cfg.weight);
+  // komponentenspezifische Faktoren (gelten gleich für alle Etappen des Tages)
+  const gKg = Number(input.gewichtKg);
+  const wf = weightFactors(Number.isFinite(gKg) ? gKg : cfg.weight.basislast, cfg.weight);
   const fSchnee = cfg.schneeSpur[input.schneeSpur] ?? 1;
   const fHoehe = hoeheFactor(input.mittlereHoehe, cfg.hoehe);
 
-  const tAufAdj = tAuf * wf.auf * fSchnee * fHoehe;
-  const tAbAdj = tAb * (isSki ? 1 : fSchnee); // Skitour-Abfahrt: kein Schnee-Bremsfaktor
-  const tHorizAufAdj = tHorizAuf * wf.horiz * fSchnee;
-  const tHorizAbAdj = tHorizAb * wf.horiz * fSchnee;
+  // Etappen am Tag: Werte oben = Etappe 1, zusätzliche aus input.etappen (defensiv, geklemmt >= 0).
+  const extraEtappen = Array.isArray(input.etappen) ? input.etappen : [];
+  const segInput = [
+    { name: 'Etappe 1', hmAuf: nn(input.hmAuf), hmAb: nn(input.hmAb), distAufKm: nn(input.distAufKm), distAbKm: nn(input.distAbKm) },
+    ...extraEtappen.map((e, i) => ({
+      name: e.name || `Etappe ${i + 2}`,
+      hmAuf: nn(e.hmAuf), hmAb: nn(e.hmAb), distAufKm: nn(e.distAufKm), distAbKm: nn(e.distAbKm),
+    })),
+  ];
 
-  // pro Etappe kombinieren, dann summieren
-  const aufstiegZeit = davLeg(tAufAdj, tHorizAufAdj);
-  const abstiegZeit = davLeg(tAbAdj, tHorizAbAdj);
+  let aufstiegZeit = 0, abstiegZeit = 0;
+  let hmAufTotal = 0, hmAbTotal = 0, distAufTotal = 0, distAbTotal = 0;
+  const segmente = segInput.map((s) => {
+    const tAufAdj = (s.hmAuf / base.vAuf) * wf.auf * fSchnee * fHoehe;
+    const tAbAdj = (s.hmAb / vAb) * (isSki ? 1 : fSchnee); // Skitour-Abfahrt: kein Schnee-Bremsfaktor
+    const tHorizAufAdj = (s.distAufKm / base.vHoriz) * wf.horiz * fSchnee;
+    const tHorizAbAdj = (s.distAbKm / base.vHoriz) * wf.horiz * fSchnee;
+    const aufZeit = davLeg(tAufAdj, tHorizAufAdj);
+    const abZeit = davLeg(tAbAdj, tHorizAbAdj);
+    aufstiegZeit += aufZeit; abstiegZeit += abZeit;
+    hmAufTotal += s.hmAuf; hmAbTotal += s.hmAb; distAufTotal += s.distAufKm; distAbTotal += s.distAbKm;
+    return { ...s, aufZeit, abZeit, segZeit: aufZeit + abZeit };
+  });
   const gehzeitBasis = aufstiegZeit + abstiegZeit;
 
   // globale Faktoren
@@ -121,9 +138,6 @@ export function computeTour(input = {}) {
 
   const globalF = fAkt * fGel * fWit * fWind * fSich * fLaw * fGrp;
   const netto = gehzeitBasis * globalF;
-  // globale Faktoren anteilig auf die Etappen verteilen (für die Zusammenfassung)
-  const aufstiegNetto = aufstiegZeit * globalF;
-  const abstiegNetto = abstiegZeit * globalF;
 
   const autoMin = input.pauseAutoMinProStunde ?? cfg.pause.autoMinProStunde;
   const pauseAuto = netto * (autoMin / 60);
@@ -145,10 +159,14 @@ export function computeTour(input = {}) {
     netto, brutto, ankunft,
     nettoHM: formatHM(netto), bruttoHM: formatHM(brutto),
     pauseAutoHM: formatHM(pauseAuto), pauseBenanntHM: formatHM(pauseBenannt),
-    aufstiegNettoHM: formatHM(aufstiegNetto), abstiegNettoHM: formatHM(abstiegNetto),
+    aufstiegNettoHM: formatHM(aufstiegZeit * globalF), abstiegNettoHM: formatHM(abstiegZeit * globalF),
+    hmAufTotal, hmAbTotal, distAufTotal, distAbTotal,
+    segmente: segmente.map((s) => ({
+      name: s.name, hmAuf: s.hmAuf, hmAb: s.hmAb, distAufKm: s.distAufKm, distAbKm: s.distAbKm,
+      segNettoHM: formatHM(s.segZeit * globalF),
+    })),
     warnungen,
     aufschluesselung: {
-      tAuf, tAb, tHorizAuf, tHorizAb,
       aufstiegZeit, abstiegZeit, gehzeitBasis,
       faktoren: {
         gewichtAuf: wf.auf, gewichtHoriz: wf.horiz, schneeSpur: fSchnee, hoehe: fHoehe,

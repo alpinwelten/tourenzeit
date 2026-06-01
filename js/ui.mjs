@@ -17,6 +17,7 @@ const DEFAULT_STATE = {
   hmAuf: 1000, distAufKm: 4, hmAb: 1000, distAbKm: 4, gewichtKg: 12,
   aktivitaet: 'wandern', schneeSpur: 'aper', lawine: 'na', gelaende: 'T1',
   sicherung: 'kein', witterung: [], wind: 'windstill', gruppe: 'solo', mittlereHoehe: 1500,
+  etappen: [],
   pauseAutoMinProStunde: 5, benanntePausen: [], startzeit: '', useSac: false, config: {},
 };
 
@@ -124,6 +125,44 @@ $('#addPause').addEventListener('click', () => {
   recompute();
 });
 
+// ---------- Etappen am Tag ----------
+const etappenList = $('#etappenList');
+const eNum = [
+  { k: 'hmAuf', label: 'Aufstieg', unit: 'Hm' },
+  { k: 'distAufKm', label: 'Strecke', unit: 'km' },
+  { k: 'hmAb', label: 'Abstieg', unit: 'Hm' },
+  { k: 'distAbKm', label: 'Strecke', unit: 'km' },
+];
+function renderEtappen() {
+  etappenList.innerHTML = '';
+  (state.etappen || []).forEach((e, i) => {
+    const item = document.createElement('div');
+    item.className = 'etappe-item';
+    const grid = eNum.map((f) =>
+      `<label class="e-field"><span>${f.label}</span><span class="field-value"><input class="e-${f.k}" type="number" inputmode="numeric" value="${num(e[f.k])}" /><span class="unit">${f.unit}</span></span></label>`
+    ).join('');
+    item.innerHTML =
+      `<div class="etappe-head"><input class="e-name" type="text" placeholder="Etappe ${i + 2}" value="${esc(e.name || '')}" />` +
+      `<button class="etappe-del" type="button" aria-label="Etappe entfernen">×</button></div>` +
+      `<div class="etappe-grid">${grid}</div>`;
+    $('.e-name', item).addEventListener('input', (ev) => { state.etappen[i].name = ev.target.value; saveState(state); updateEtappenBadge(); });
+    eNum.forEach((f) => $('.e-' + f.k, item).addEventListener('input', (ev) => { state.etappen[i][f.k] = num(ev.target.value); recompute(); }));
+    $('.etappe-del', item).addEventListener('click', () => { state.etappen.splice(i, 1); renderEtappen(); recompute(); });
+    etappenList.appendChild(item);
+  });
+  updateEtappenBadge();
+}
+function updateEtappenBadge() {
+  const n = (state.etappen || []).length;
+  $('#etappenCount').textContent = n ? `${n + 1} Etappen` : '';
+}
+$('#addEtappe').addEventListener('click', () => {
+  state.etappen = state.etappen || [];
+  state.etappen.push({ name: '', hmAuf: 0, distAufKm: 0, hmAb: 0, distAbKm: 0 });
+  renderEtappen();
+  recompute();
+});
+
 // ---------- Experten ----------
 const useSac = $('#useSac');
 const sacLocked = ['vAuf', 'vAb', 'vHoriz'];
@@ -173,7 +212,7 @@ function buildInput() {
     gewichtKg: num(state.gewichtKg),
     aktivitaet: state.aktivitaet, schneeSpur: state.schneeSpur, gelaende: state.gelaende,
     witterung: state.witterung, wind: state.wind, sicherung: state.sicherung, lawine: state.lawine,
-    gruppe: state.gruppe, mittlereHoehe: num(state.mittlereHoehe),
+    gruppe: state.gruppe, mittlereHoehe: num(state.mittlereHoehe), etappen: state.etappen || [],
     pauseAutoMinProStunde: num(state.pauseAutoMinProStunde), benanntePausen: state.benanntePausen,
     startzeit: state.startzeit || null, useSac: !!state.useSac, config: state.config || {},
   };
@@ -198,9 +237,9 @@ function bdRow(label, value) { return `<div class="bd-row"><span>${label}</span>
 function renderBreakdown(r) {
   const a = r.aufschluesselung;
   const f = a.faktoren;
-  let html = '<div class="bd-head">Etappen (Höhe / Strecke → kombiniert)</div>';
-  html += bdRow('Aufstieg', `${formatHM(a.tAuf)} / ${formatHM(a.tHorizAuf)} → ${formatHM(a.aufstiegZeit)}`);
-  html += bdRow('Abstieg', `${formatHM(a.tAb)} / ${formatHM(a.tHorizAb)} → ${formatHM(a.abstiegZeit)}`);
+  let html = '<div class="bd-head">Gehzeit (vor globalen Faktoren)</div>';
+  html += bdRow('Aufstieg gesamt', formatHM(a.aufstiegZeit));
+  html += bdRow('Abstieg gesamt', formatHM(a.abstiegZeit));
   html += bdRow('Gehzeit (Basis)', formatHM(a.gehzeitBasis));
 
   html += '<div class="bd-head">Globale Faktoren</div>';
@@ -227,9 +266,19 @@ function renderSummary(r) {
   const preset = state.useSac ? 'SAC' : 'DAV';
 
   let html = '';
-  html += legRow('Aufstieg', `${disp(state.hmAuf)} Hm · ${disp(state.distAufKm)} km`, r.aufstiegNettoHM);
-  html += legRow('Abstieg', `${disp(state.hmAb)} Hm · ${disp(state.distAbKm)} km`, r.abstiegNettoHM);
-  html += legRow('Gehzeit (netto)', 'Auf- + Abstieg', r.nettoHM);
+  if (r.segmente.length > 1) {
+    r.segmente.forEach((s, i) => {
+      const name = s.name || `Etappe ${i + 1}`;
+      const detail = `↑ ${disp(s.hmAuf)} Hm · ${disp(s.distAufKm)} km · ↓ ${disp(s.hmAb)} Hm · ${disp(s.distAbKm)} km`;
+      html += legRow(esc(name), detail, s.segNettoHM);
+    });
+    html += legRow('Auf-/Abstieg gesamt', `↑ ${disp(r.hmAufTotal)} Hm · ↓ ${disp(r.hmAbTotal)} Hm`, `${r.aufstiegNettoHM} / ${r.abstiegNettoHM}`);
+    html += legRow('Gehzeit (netto)', 'alle Etappen', r.nettoHM);
+  } else {
+    html += legRow('Aufstieg', `${disp(r.hmAufTotal)} Hm · ${disp(r.distAufTotal)} km`, r.aufstiegNettoHM);
+    html += legRow('Abstieg', `${disp(r.hmAbTotal)} Hm · ${disp(r.distAbTotal)} km`, r.abstiegNettoHM);
+    html += legRow('Gehzeit (netto)', 'Auf- + Abstieg', r.nettoHM);
+  }
   html += legRow('Pausen', `${num(state.pauseAutoMinProStunde)} Min/Std + geplant`, pauseGesamt);
   html += `<div class="sum-total"><div class="leg-name">Tourdauer</div><div class="leg-time">${r.bruttoHM}</div></div>`;
   if (r.ankunft) html += legRow('Ankunft', `Start ${state.startzeit} Uhr`, r.ankunft);
@@ -248,4 +297,5 @@ function renderWarnungen(r) {
 initFields();
 initControls();
 renderPausen();
+renderEtappen();
 recompute();

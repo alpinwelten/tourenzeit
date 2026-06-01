@@ -115,3 +115,58 @@ test('computeTour: Warnungen bei hoher Lawinenstufe und Sturm', () => {
   const r = computeTour({ ...baseInput, hmAuf: 500, distAufKm: 1, lawine: 's4', wind: 'sturm' });
   assert.equal(r.warnungen.length, 2);
 });
+
+// ---------- Etappen am Tag ----------
+test('computeTour: Etappen am Tag werden summiert', () => {
+  // Etappe 1 nur Aufstieg 1000/4, Etappe 2 nur Abstieg 1000/4 → wie 1000/1000/4/4
+  const r = computeTour({
+    ...baseInput, hmAuf: 1000, distAufKm: 4, hmAb: 0, distAbKm: 0,
+    etappen: [{ name: 'Abfahrt', hmAuf: 0, distAufKm: 0, hmAb: 1000, distAbKm: 4 }],
+  });
+  assert.equal(r.nettoHM, '6:20');
+  assert.equal(r.segmente.length, 2);
+  assert.equal(r.aufstiegNettoHM, '3:50'); // 3.833 h
+  assert.equal(r.abstiegNettoHM, '2:30');  // 2.5 h
+});
+
+test('computeTour: zwei identische Etappen verdoppeln die Gehzeit', () => {
+  const eine = computeTour({ ...baseInput, hmAuf: 600, distAufKm: 2, hmAb: 600, distAbKm: 2 });
+  const zwei = computeTour({
+    ...baseInput, hmAuf: 600, distAufKm: 2, hmAb: 600, distAbKm: 2,
+    etappen: [{ hmAuf: 600, distAufKm: 2, hmAb: 600, distAbKm: 2 }],
+  });
+  assert.ok(Math.abs(zwei.netto - 2 * eine.netto) < 1e-9);
+  assert.equal(zwei.segmente.length, 2);
+});
+
+// ---------- Robustheit / Edge-Cases ----------
+test('formatHM: nicht-endliche Werte zeigen Platzhalter statt 0:00', () => {
+  assert.equal(formatHM(NaN), '–');
+  assert.equal(formatHM(Infinity), '–');
+});
+
+test('computeTour: NaN-Gewicht vergiftet die Rechnung nicht', () => {
+  const r = computeTour({ ...baseInput, hmAuf: 1000, distAufKm: 2, gewichtKg: NaN });
+  const ref = computeTour({ ...baseInput, hmAuf: 1000, distAufKm: 2, gewichtKg: 8 });
+  assert.ok(Number.isFinite(r.netto));
+  assert.equal(r.nettoHM, ref.nettoHM); // NaN -> Basislast
+});
+
+test('computeTour: negative Eingaben werden auf 0 geklemmt', () => {
+  const r = computeTour({ ...baseInput, hmAuf: -1000, distAufKm: -4, hmAb: 500, distAbKm: 2 });
+  const ref = computeTour({ ...baseInput, hmAuf: 0, distAufKm: 0, hmAb: 500, distAbKm: 2 });
+  assert.ok(r.netto >= 0);
+  assert.equal(r.nettoHM, ref.nettoHM);
+});
+
+test('computeTour: Geschwindigkeit 0 fällt auf Default zurück (kein Infinity)', () => {
+  const r = computeTour({ ...baseInput, hmAuf: 1200, config: { speeds: { vAuf: 0 } } });
+  assert.ok(Number.isFinite(r.netto));
+  assert.notEqual(r.nettoHM, '–');
+});
+
+test('computeTour: etappen als Nicht-Array wirft nicht', () => {
+  const r = computeTour({ ...baseInput, hmAuf: 1000, distAufKm: 2, etappen: {} });
+  assert.equal(r.segmente.length, 1);
+  assert.ok(Number.isFinite(r.netto));
+});
