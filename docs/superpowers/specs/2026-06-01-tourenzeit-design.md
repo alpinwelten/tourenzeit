@@ -84,7 +84,7 @@ Zwei Stufen, jede Komponente bleibt in der Aufschlüsselung sichtbar:
 Berechnung:
 ```
 tAuf'   = tAuf  * fGewichtAuf * fSchneeSpur * fHoehe
-tAb'    = tAb   * (Skitour ? 1 : fSchneeSpur_ab)
+tAb'    = tAb   * (Skitour ? 1 : fSchneeSpur)   // zu Fuß bremst Schnee/Spur auch den Abstieg; Skitour = Abfahrt
 tHoriz' = tHoriz* fGewichtHoriz * fSchneeSpur
 gehzeitBasis' = davKombination(tAuf', tAb', tHoriz')
 gehzeitNetto  = gehzeitBasis' * fAktivität * fGelände * fWitterung * fGruppe
