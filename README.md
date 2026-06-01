@@ -6,6 +6,8 @@ Eine installierbare, **offline-fähige Web-App** zur Berechnung von **Gehzeit un
 
 Optimiert für **iPhone & iPad**: zum Home-Bildschirm hinzufügen, eigenes Icon, läuft **ohne Internet** (z. B. am Berg).
 
+**GPX-Import:** Track-Datei laden → Aufstieg, Abstieg und die getrennten Auf-/Abstiegsstrecken werden automatisch übernommen (Höhenrauschen wird gefiltert).
+
 ---
 
 ## Berechnungsmethode

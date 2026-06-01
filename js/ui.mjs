@@ -1,5 +1,6 @@
 // ui.mjs — DOM-Verdrahtung: liest Eingaben, ruft computeTour, rendert Ergebnis.
 import { computeTour, DEFAULTS, mergeConfig, formatHM } from './engine.mjs';
+import { parseGpx } from './gpx.mjs';
 import { loadState, saveState, clearState } from './storage.mjs';
 
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -162,6 +163,32 @@ $('#addEtappe').addEventListener('click', () => {
   renderEtappen();
   recompute();
 });
+
+// ---------- GPX-Import ----------
+$('#gpxBtn').addEventListener('click', () => $('#gpxFile').click());
+$('#gpxFile').addEventListener('change', (e) => {
+  const file = e.target.files && e.target.files[0];
+  e.target.value = ''; // erlaubt erneuten Import derselben Datei
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    let r = null;
+    try { r = parseGpx(String(reader.result)); } catch { /* fehlerhafte Datei */ }
+    if (!r || !r.punkte) { showGpxNote('Keine Trackpunkte im GPX gefunden.', true); return; }
+    state.hmAuf = r.hmAuf; state.hmAb = r.hmAb; state.distAufKm = r.distAufKm; state.distAbKm = r.distAbKm;
+    initFields();
+    recompute();
+    showGpxNote(`Importiert: ↑ ${r.hmAuf} Hm · ${r.distAufKm} km · ↓ ${r.hmAb} Hm · ${r.distAbKm} km`, false);
+  };
+  reader.onerror = () => showGpxNote('Datei konnte nicht gelesen werden.', true);
+  reader.readAsText(file);
+});
+function showGpxNote(msg, isError) {
+  const el = $('#gpxNote');
+  el.hidden = false;
+  el.textContent = msg;
+  el.classList.toggle('error', !!isError);
+}
 
 // ---------- Experten ----------
 const useSac = $('#useSac');

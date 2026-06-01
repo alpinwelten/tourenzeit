@@ -45,6 +45,11 @@
 
     <!-- Daten der Tour -->
     <h2 class="section-title">Daten der Tour</h2>
+    <div class="gpx-row">
+      <button id="gpxBtn" class="btn-gpx" type="button">📍 GPX-Track importieren</button>
+      <input id="gpxFile" type="file" accept=".gpx,application/gpx+xml,application/xml,text/xml" hidden />
+      <span id="gpxNote" class="gpx-note" hidden></span>
+    </div>
     <section class="grundwerte" aria-label="Daten der Tour">
       <div class="field" data-field="hmAuf" data-min="0" data-max="3000" data-step="50">
         <div class="field-head">

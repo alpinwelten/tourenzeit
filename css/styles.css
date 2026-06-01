@@ -250,6 +250,17 @@ input[type="time"] { width: auto; min-width: 7.5em; }
 }
 .sub-unit { color: var(--muted); font-weight: 500; font-size: 0.82rem; }
 
+/* ---------- GPX-Import ---------- */
+.gpx-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 2px 0 2px; }
+.btn-gpx {
+  background: var(--surface-3); color: var(--accent-2); border: 1px solid var(--line);
+  border-radius: var(--radius-sm); padding: 11px 16px; font-size: 0.95rem; font-weight: 600;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.btn-gpx:active { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.gpx-note { font-size: 0.82rem; color: var(--good); flex: 1 1 100%; line-height: 1.4; }
+.gpx-note.error { color: var(--accent); }
+
 /* ---------- Zusammenfassung ---------- */
 .summary-card {
   background: linear-gradient(160deg, var(--surface-2), var(--surface));
