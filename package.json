@@ -1,0 +1,10 @@
+{
+  "name": "tourenzeit",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Gehzeit- und Tourenzeit-Rechner (PWA)",
+  "scripts": {
+    "test": "node --test"
+  }
+}
