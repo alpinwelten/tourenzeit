@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f141a" />
+  <title>Tourenzeit</title>
+  <meta name="description" content="Gehzeit- und Tourenzeit-Rechner nach DAV-Methode, erweitert um Rucksackgewicht, Gelände-, Schnee- und Pausenfaktoren." />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Tourenzeit" />
+  <link rel="apple-touch-icon" href="icons/icon-180.png" />
+  <link rel="icon" href="icons/icon-192.png" />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="app-header">
+      <h1>Tourenzeit</h1>
+      <p class="sub">Gehzeit · Pausen · Ankunft</p>
+    </header>
+
+    <!-- Ergebnis -->
+    <section class="result-card" aria-live="polite">
+      <div class="result-main">
+        <span class="result-label">Netto-Gehzeit</span>
+        <span class="result-time" id="netto">–:––</span>
+        <span class="result-unit">h</span>
+      </div>
+      <div class="result-secondary">
+        <div class="result-item">
+          <span>Tourdauer (brutto)</span><strong id="brutto">–:––</strong>
+        </div>
+        <div class="result-item" id="ankunftRow" hidden>
+          <span>Ankunft</span><strong id="ankunft">–:––</strong>
+        </div>
+      </div>
+      <details class="breakdown">
+        <summary>Aufschlüsselung</summary>
+        <div id="breakdownBody" class="breakdown-body"></div>
+      </details>
+    </section>
+
+    <!-- Grundwerte -->
+    <section class="grundwerte" aria-label="Grundwerte">
+      <div class="field" data-field="hmAuf" data-min="0" data-max="3000" data-step="50">
+        <div class="field-head">
+          <label>Aufstieg</label>
+          <div class="field-value"><input class="val" type="number" inputmode="numeric" value="1000" /><span class="unit">Hm</span></div>
+        </div>
+        <div class="field-controls">
+          <button class="step" data-dir="-1" aria-label="Aufstieg verringern">−</button>
+          <input class="slider" type="range" min="0" max="3000" step="50" value="1000" aria-label="Aufstieg" />
+          <button class="step" data-dir="1" aria-label="Aufstieg erhöhen">+</button>
+        </div>
+      </div>
+
+      <div class="field" data-field="hmAb" data-min="0" data-max="3000" data-step="50">
+        <div class="field-head">
+          <label>Abstieg</label>
+          <div class="field-value"><input class="val" type="number" inputmode="numeric" value="1000" /><span class="unit">Hm</span></div>
+        </div>
+        <div class="field-controls">
+          <button class="step" data-dir="-1" aria-label="Abstieg verringern">−</button>
+          <input class="slider" type="range" min="0" max="3000" step="50" value="1000" aria-label="Abstieg" />
+          <button class="step" data-dir="1" aria-label="Abstieg erhöhen">+</button>
+        </div>
+      </div>
+
+      <div class="field" data-field="distKm" data-min="0" data-max="50" data-step="0.5">
+        <div class="field-head">
+          <label>Distanz</label>
+          <div class="field-value"><input class="val" type="number" inputmode="decimal" step="0.5" value="8" /><span class="unit">km</span></div>
+        </div>
+        <div class="field-controls">
+          <button class="step" data-dir="-1" aria-label="Distanz verringern">−</button>
+          <input class="slider" type="range" min="0" max="50" step="0.5" value="8" aria-label="Distanz" />
+          <button class="step" data-dir="1" aria-label="Distanz erhöhen">+</button>
+        </div>
+      </div>
+
+      <div class="field" data-field="gewichtKg" data-min="5" data-max="60" data-step="1">
+        <div class="field-head">
+          <label>Rucksackgewicht</label>
+          <div class="field-value"><input class="val" type="number" inputmode="numeric" value="12" /><span class="unit">kg</span></div>
+        </div>
+        <div class="field-controls">
+          <button class="step" data-dir="-1" aria-label="Gewicht verringern">−</button>
+          <input class="slider" type="range" min="5" max="60" step="1" value="12" aria-label="Rucksackgewicht" />
+          <button class="step" data-dir="1" aria-label="Gewicht erhöhen">+</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Bedingungen -->
+    <details class="section" id="bedingungen">
+      <summary>Bedingungen</summary>
+      <div class="section-body">
+        <div class="row">
+          <label class="row-label">Aktivität</label>
+          <div class="segmented" data-state-key="aktivitaet">
+            <button data-value="wandern">Wandern</button>
+            <button data-value="bergsteigen">Bergsteigen</button>
+            <button data-value="skitour">Skitour</button>
+          </div>
+        </div>
+
+        <div class="row">
+          <label class="row-label" for="schneeSpur">Schnee &amp; Spur</label>
+          <select id="schneeSpur">
+            <option value="aper">Aper (kein Schnee)</option>
+            <option value="wenigSpur">Wenig Schnee, Spur vorhanden</option>
+            <option value="vielSpur">Viel Schnee, Spur vorhanden</option>
+            <option value="vielSpuranlage">Viel Schnee, Spuranlage nötig</option>
+            <option value="tiefschneeSpuranlage">Tiefschnee, Spuranlage nötig</option>
+          </select>
+        </div>
+
+        <div class="row">
+          <label class="row-label">Geländeschwierigkeit (SAC)</label>
+          <div class="segmented chips" data-state-key="gelaende">
+            <button data-value="T1">T1</button>
+            <button data-value="T2">T2</button>
+            <button data-value="T3">T3</button>
+            <button data-value="T4">T4</button>
+            <button data-value="T5">T5</button>
+            <button data-value="T6">T6</button>
+          </div>
+        </div>
+
+        <div class="row">
+          <label class="row-label">Witterung &amp; Sicht</label>
+          <div class="segmented toggles" data-state-key="witterung">
+            <button data-value="nebel">Nebel / Sicht</button>
+            <button data-value="naesse">Nässe / Sturm</button>
+            <button data-value="dunkelheit">Dunkelheit</button>
+          </div>
+        </div>
+
+        <div class="row">
+          <label class="row-label" for="gruppe">Gruppe &amp; Kondition</label>
+          <select id="gruppe">
+            <option value="solo">Solo / 2er-Seilschaft</option>
+            <option value="klein">Gruppe 3–5</option>
+            <option value="gross">Gruppe 6+</option>
+            <option value="heterogen">Heterogen / erschöpft</option>
+          </select>
+        </div>
+
+        <div class="row inline">
+          <label class="row-label" for="mittlereHoehe">Mittlere Höhe der Tour</label>
+          <div class="field-value"><input id="mittlereHoehe" type="number" inputmode="numeric" value="1500" /><span class="unit">m</span></div>
+        </div>
+      </div>
+    </details>
+
+    <!-- Pausen -->
+    <details class="section" id="pausenSection">
+      <summary>Pausen &amp; Start</summary>
+      <div class="section-body">
+        <div class="row inline">
+          <label class="row-label" for="pauseAuto">Automatische Pause</label>
+          <div class="field-value"><input id="pauseAuto" type="number" inputmode="numeric" value="5" /><span class="unit">Min/Std</span></div>
+        </div>
+
+        <div class="row">
+          <label class="row-label">Geplante Pausen</label>
+          <div id="pausenList" class="pausen-list"></div>
+          <button id="addPause" class="btn-add" type="button">+ Pause hinzufügen</button>
+        </div>
+
+        <div class="row inline">
+          <label class="row-label" for="startzeit">Startzeit (optional)</label>
+          <input id="startzeit" type="time" />
+        </div>
+      </div>
+    </details>
+
+    <!-- Experten -->
+    <details class="section" id="experten">
+      <summary>Experten</summary>
+      <div class="section-body">
+        <label class="check-row">
+          <input id="useSac" type="checkbox" />
+          <span>SAC-Geschwindigkeiten (Trainierte: 400/800 Hm/h)</span>
+        </label>
+
+        <div class="grid2">
+          <div class="row inline"><label class="row-label" for="vAuf">Aufstieg</label><div class="field-value"><input id="vAuf" type="number" value="300" /><span class="unit">Hm/h</span></div></div>
+          <div class="row inline"><label class="row-label" for="vAb">Abstieg</label><div class="field-value"><input id="vAb" type="number" value="500" /><span class="unit">Hm/h</span></div></div>
+          <div class="row inline"><label class="row-label" for="vHoriz">Horizontal</label><div class="field-value"><input id="vHoriz" type="number" value="4" /><span class="unit">km/h</span></div></div>
+          <div class="row inline"><label class="row-label" for="vSki">Abfahrt (Ski)</label><div class="field-value"><input id="vSki" type="number" value="1500" /><span class="unit">Hm/h</span></div></div>
+        </div>
+
+        <p class="hint">Gewichts-Kalibrierung</p>
+        <div class="grid2">
+          <div class="row inline"><label class="row-label" for="basislast">Basislast</label><div class="field-value"><input id="basislast" type="number" value="8" /><span class="unit">kg</span></div></div>
+          <div class="row inline"><label class="row-label" for="pctAuf">Aufstieg</label><div class="field-value"><input id="pctAuf" type="number" step="0.1" value="2" /><span class="unit">%/kg</span></div></div>
+          <div class="row inline"><label class="row-label" for="pctHoriz">Horizontal</label><div class="field-value"><input id="pctHoriz" type="number" step="0.1" value="0.5" /><span class="unit">%/kg</span></div></div>
+        </div>
+
+        <button id="reset" class="btn-reset" type="button">Auf Standard zurücksetzen</button>
+      </div>
+    </details>
+
+    <footer class="app-footer">
+      <p>Berechnung nach DAV-Methode (300/500/4 Hm·km/h) · erweitert um Gewicht &amp; Bedingungen. Planungshilfe ohne Gewähr.</p>
+    </footer>
+  </div>
+
+  <script type="module" src="js/ui.mjs"></script>
+  <script type="module" src="js/sw-register.mjs"></script>
+</body>
+</html>

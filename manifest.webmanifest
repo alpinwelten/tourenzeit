@@ -1,0 +1,17 @@
+{
+  "name": "Tourenzeit",
+  "short_name": "Tourenzeit",
+  "description": "Gehzeit- und Tourenzeit-Rechner nach DAV-Methode, erweitert um Rucksackgewicht und Bedingungen.",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f141a",
+  "theme_color": "#0f141a",
+  "lang": "de",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
