@@ -222,6 +222,42 @@ input[type="time"] { width: auto; min-width: 7.5em; }
 }
 .btn-reset:active { color: var(--accent); border-color: var(--accent); }
 
+/* ---------- Section titles, sub-units ---------- */
+.section-title {
+  margin: 8px 2px -2px; font-size: 0.78rem; font-weight: 700; letter-spacing: 1.2px;
+  text-transform: uppercase; color: var(--accent-2);
+}
+.sub-unit { color: var(--muted); font-weight: 500; font-size: 0.82rem; }
+
+/* ---------- Zusammenfassung ---------- */
+.summary-card {
+  background: linear-gradient(160deg, var(--surface-2), var(--surface));
+  border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px;
+}
+.summary-body { display: flex; flex-direction: column; }
+.sum-leg { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--line); }
+.sum-leg:last-of-type { border-bottom: 0; }
+.sum-leg .leg-name { font-weight: 700; }
+.sum-leg .leg-detail { color: var(--muted); font-size: 0.86rem; }
+.sum-leg .leg-time { font-size: 1.3rem; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--text); }
+.sum-total { display: flex; justify-content: space-between; align-items: baseline; padding: 12px 0 2px; margin-top: 4px; border-top: 2px solid var(--surface-3); }
+.sum-total .leg-name { font-weight: 800; }
+.sum-total .leg-time {
+  font-size: 1.7rem; font-weight: 800; font-variant-numeric: tabular-nums;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.sum-meta { color: var(--muted); font-size: 0.78rem; margin-top: 10px; line-height: 1.5; }
+
+/* ---------- Warnungen ---------- */
+.warnungen { display: flex; flex-direction: column; gap: 8px; }
+.warn {
+  background: rgba(255, 90, 60, 0.12); border: 1px solid rgba(255, 90, 60, 0.5);
+  color: #ffd9cf; border-radius: var(--radius-sm); padding: 11px 14px; font-size: 0.9rem;
+  display: flex; gap: 9px; align-items: flex-start;
+}
+.warn::before { content: "⚠"; color: var(--accent); font-size: 1.05rem; line-height: 1.2; }
+
 .app-footer { color: var(--muted); font-size: 0.74rem; text-align: center; padding: 6px 8px 0; line-height: 1.5; }
 
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }

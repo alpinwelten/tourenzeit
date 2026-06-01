@@ -10,16 +10,19 @@ Optimiert für **iPhone & iPad**: zum Home-Bildschirm hinzufügen, eigenes Icon,
 
 ## Berechnungsmethode
 
-**Basis (DAV):** Aufstieg 300 Hm/h · Abstieg 500 Hm/h · Horizontal 4 km/h.
-Die vertikale Gesamtzeit (Auf + Ab) und die horizontale Zeit werden kombiniert: der **kleinere Wert wird halbiert und zum größeren addiert**. Optional **SAC-Geschwindigkeiten** (400/800 Hm/h) für Trainierte.
+**Basis (DAV / SAC):** Aufstieg 300 Hm/h · Abstieg 500 Hm/h · Horizontal 4 km/h (optional **SAC** 400/800 Hm/h für Trainierte).
+Auf- und Abstieg werden als **getrennte Etappen** mit jeweils eigener Strecke gerechnet: pro Etappe wird der **kleinere von Höhen- und Streckenzeit halbiert und zum größeren addiert** (DAV-Regel), anschließend werden beide Etappen summiert. Das liefert getrennte **Auf-/Abstiegszeiten** und die Gesamt-Gehzeit. Methodischer Abgleich mit der Munter-/SAC-Methode und Skitourenguru-Referenzwerten.
 
 **Erweiterungen (alle in den Einstellungen kalibrierbar):**
 
-- **Rucksackgewicht (5–60 kg):** ab einer Basislast (Standard 8 kg) verlangsamt jedes Kilo den Aufstieg (Standard +2 %/kg) und die Horizontalstrecke (+0,5 %/kg).
+- **Rucksackgewicht (5–60 kg):** ab einer Basislast (Standard 8 kg) verlangsamt jedes Kilo den Aufstieg (≈ 1,8 %/kg, bei schweren Lasten progressiv nach Pandolf-Idee) und die Horizontalstrecke (+0,5 %/kg).
 - **Aktivität:** Wandern · Bergsteigen · Skitour (im Skitour-Modus zählt der Abstieg als schnelle Abfahrt).
 - **Schnee & Spur:** von „aper" bis „Tiefschnee, Spuranlage nötig" (bis ×2,0).
+- **Lawinen-Gefahrenstufe (1–5):** Zeitzuschlag durch vorsichtigere Routenwahl + **Risiko-Warnhinweis** ab Stufe 3.
 - **Geländeschwierigkeit:** SAC-Wanderskala T1–T6.
-- **Witterung & Sicht:** Nebel, Nässe/Sturm, Dunkelheit (kombinierbar).
+- **Trittsicherheit & Material:** Steigeisen/Pickel, gelegentliches Sichern bis Seillängen (Sichern kostet am meisten Zeit).
+- **Witterung & Sicht:** Nebel, Nässe/Regen, Dunkelheit (kombinierbar).
+- **Wind & Kälte:** mäßig bis Sturm (Windchill) inkl. Warnhinweis.
 - **Gruppe & Kondition** sowie **Höhenlage** (dünne Luft über 2.500 m).
 
 **Pausen:** automatisch (Standard 5 Min/Std) **plus** frei benannte Pausen (Gipfel, Mittag, Fellwechsel …). Mit optionaler **Startzeit** wird die **voraussichtliche Ankunft** berechnet.

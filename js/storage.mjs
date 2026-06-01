@@ -1,5 +1,5 @@
 // storage.mjs — Zustand in localStorage (laden/speichern/zurücksetzen)
-const KEY = 'tourenzeit.v1';
+const KEY = 'tourenzeit.v2';
 
 export function loadState(fallback) {
   try {

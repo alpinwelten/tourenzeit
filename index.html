@@ -43,41 +43,54 @@
       </details>
     </section>
 
-    <!-- Grundwerte -->
-    <section class="grundwerte" aria-label="Grundwerte">
+    <!-- Daten der Tour -->
+    <h2 class="section-title">Daten der Tour</h2>
+    <section class="grundwerte" aria-label="Daten der Tour">
       <div class="field" data-field="hmAuf" data-min="0" data-max="3000" data-step="50">
         <div class="field-head">
-          <label>Aufstieg</label>
+          <label>Aufstieg <span class="sub-unit">Höhe</span></label>
           <div class="field-value"><input class="val" type="number" inputmode="numeric" value="1000" /><span class="unit">Hm</span></div>
         </div>
         <div class="field-controls">
-          <button class="step" data-dir="-1" aria-label="Aufstieg verringern">−</button>
-          <input class="slider" type="range" min="0" max="3000" step="50" value="1000" aria-label="Aufstieg" />
-          <button class="step" data-dir="1" aria-label="Aufstieg erhöhen">+</button>
+          <button class="step" data-dir="-1" aria-label="Aufstieg Höhe verringern">−</button>
+          <input class="slider" type="range" min="0" max="3000" step="50" value="1000" aria-label="Aufstieg Höhe" />
+          <button class="step" data-dir="1" aria-label="Aufstieg Höhe erhöhen">+</button>
+        </div>
+      </div>
+
+      <div class="field" data-field="distAufKm" data-min="0" data-max="50" data-step="0.5">
+        <div class="field-head">
+          <label>Aufstieg <span class="sub-unit">Strecke</span></label>
+          <div class="field-value"><input class="val" type="number" inputmode="decimal" step="0.5" value="4" /><span class="unit">km</span></div>
+        </div>
+        <div class="field-controls">
+          <button class="step" data-dir="-1" aria-label="Aufstieg Strecke verringern">−</button>
+          <input class="slider" type="range" min="0" max="50" step="0.5" value="4" aria-label="Aufstieg Strecke" />
+          <button class="step" data-dir="1" aria-label="Aufstieg Strecke erhöhen">+</button>
         </div>
       </div>
 
       <div class="field" data-field="hmAb" data-min="0" data-max="3000" data-step="50">
         <div class="field-head">
-          <label>Abstieg</label>
+          <label>Abstieg <span class="sub-unit">Höhe</span></label>
           <div class="field-value"><input class="val" type="number" inputmode="numeric" value="1000" /><span class="unit">Hm</span></div>
         </div>
         <div class="field-controls">
-          <button class="step" data-dir="-1" aria-label="Abstieg verringern">−</button>
-          <input class="slider" type="range" min="0" max="3000" step="50" value="1000" aria-label="Abstieg" />
-          <button class="step" data-dir="1" aria-label="Abstieg erhöhen">+</button>
+          <button class="step" data-dir="-1" aria-label="Abstieg Höhe verringern">−</button>
+          <input class="slider" type="range" min="0" max="3000" step="50" value="1000" aria-label="Abstieg Höhe" />
+          <button class="step" data-dir="1" aria-label="Abstieg Höhe erhöhen">+</button>
         </div>
       </div>
 
-      <div class="field" data-field="distKm" data-min="0" data-max="50" data-step="0.5">
+      <div class="field" data-field="distAbKm" data-min="0" data-max="50" data-step="0.5">
         <div class="field-head">
-          <label>Distanz</label>
-          <div class="field-value"><input class="val" type="number" inputmode="decimal" step="0.5" value="8" /><span class="unit">km</span></div>
+          <label>Abstieg <span class="sub-unit">Strecke</span></label>
+          <div class="field-value"><input class="val" type="number" inputmode="decimal" step="0.5" value="4" /><span class="unit">km</span></div>
         </div>
         <div class="field-controls">
-          <button class="step" data-dir="-1" aria-label="Distanz verringern">−</button>
-          <input class="slider" type="range" min="0" max="50" step="0.5" value="8" aria-label="Distanz" />
-          <button class="step" data-dir="1" aria-label="Distanz erhöhen">+</button>
+          <button class="step" data-dir="-1" aria-label="Abstieg Strecke verringern">−</button>
+          <input class="slider" type="range" min="0" max="50" step="0.5" value="4" aria-label="Abstieg Strecke" />
+          <button class="step" data-dir="1" aria-label="Abstieg Strecke erhöhen">+</button>
         </div>
       </div>
 
@@ -119,6 +132,18 @@
         </div>
 
         <div class="row">
+          <label class="row-label" for="lawine">Lawinen-Gefahrenstufe</label>
+          <select id="lawine">
+            <option value="na">nicht relevant</option>
+            <option value="s1">1 – gering</option>
+            <option value="s2">2 – mäßig</option>
+            <option value="s3">3 – erheblich</option>
+            <option value="s4">4 – groß</option>
+            <option value="s5">5 – sehr groß</option>
+          </select>
+        </div>
+
+        <div class="row">
           <label class="row-label">Geländeschwierigkeit (SAC)</label>
           <div class="segmented chips" data-state-key="gelaende">
             <button data-value="T1">T1</button>
@@ -131,12 +156,32 @@
         </div>
 
         <div class="row">
+          <label class="row-label" for="sicherung">Trittsicherheit &amp; Material</label>
+          <select id="sicherung">
+            <option value="kein">keine / Gehgelände</option>
+            <option value="steigeisen">Steigeisen / Pickel</option>
+            <option value="seilGelegentlich">gelegentlich Seil / Sicherung</option>
+            <option value="seillaengen">Seillängen (Standplätze)</option>
+          </select>
+        </div>
+
+        <div class="row">
           <label class="row-label">Witterung &amp; Sicht</label>
           <div class="segmented toggles" data-state-key="witterung">
             <button data-value="nebel">Nebel / Sicht</button>
-            <button data-value="naesse">Nässe / Sturm</button>
+            <button data-value="naesse">Nässe / Regen</button>
             <button data-value="dunkelheit">Dunkelheit</button>
           </div>
+        </div>
+
+        <div class="row">
+          <label class="row-label" for="wind">Wind &amp; Kälte</label>
+          <select id="wind">
+            <option value="windstill">windstill / mild (&lt; 15 km/h)</option>
+            <option value="maessig">mäßiger Wind (15–30 km/h)</option>
+            <option value="stark">starker Wind / kalt (30–50 km/h)</option>
+            <option value="sturm">Sturm / Windchill (&gt; 50 km/h)</option>
+          </select>
         </div>
 
         <div class="row">
@@ -187,6 +232,7 @@
           <span>SAC-Geschwindigkeiten (Trainierte: 400/800 Hm/h)</span>
         </label>
 
+        <p class="hint">Deine Leistung pro Stunde</p>
         <div class="grid2">
           <div class="row inline"><label class="row-label" for="vAuf">Aufstieg</label><div class="field-value"><input id="vAuf" type="number" value="300" /><span class="unit">Hm/h</span></div></div>
           <div class="row inline"><label class="row-label" for="vAb">Abstieg</label><div class="field-value"><input id="vAb" type="number" value="500" /><span class="unit">Hm/h</span></div></div>
@@ -204,6 +250,13 @@
         <button id="reset" class="btn-reset" type="button">Auf Standard zurücksetzen</button>
       </div>
     </details>
+
+    <!-- Zusammenfassung -->
+    <h2 class="section-title">Zusammenfassung</h2>
+    <div id="warnungen" class="warnungen" hidden></div>
+    <section class="summary-card" aria-live="polite">
+      <div id="summaryBody" class="summary-body"></div>
+    </section>
 
     <footer class="app-footer">
       <p>Berechnung nach DAV-Methode (300/500/4 Hm·km/h) · erweitert um Gewicht &amp; Bedingungen. Planungshilfe ohne Gewähr.</p>

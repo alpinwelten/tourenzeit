@@ -11,18 +11,17 @@ const num = (v) => {
 };
 const round2 = (v) => Math.round(v * 100) / 100;
 const disp = (v) => round2(v).toString();
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 const DEFAULT_STATE = {
-  hmAuf: 1000, hmAb: 1000, distKm: 8, gewichtKg: 12,
-  aktivitaet: 'wandern', schneeSpur: 'aper', gelaende: 'T1',
-  witterung: [], gruppe: 'solo', mittlereHoehe: 1500,
-  pauseAutoMinProStunde: 5, benanntePausen: [], startzeit: '', useSac: false,
-  config: {},
+  hmAuf: 1000, distAufKm: 4, hmAb: 1000, distAbKm: 4, gewichtKg: 12,
+  aktivitaet: 'wandern', schneeSpur: 'aper', lawine: 'na', gelaende: 'T1',
+  sicherung: 'kein', witterung: [], wind: 'windstill', gruppe: 'solo', mittlereHoehe: 1500,
+  pauseAutoMinProStunde: 5, benanntePausen: [], startzeit: '', useSac: false, config: {},
 };
 
 let state = loadState(DEFAULT_STATE);
 
-// ---------- Helfer: Config tief setzen ----------
 function setCfg(section, key, value) {
   state.config = state.config || {};
   state.config[section] = { ...(state.config[section] || {}), [key]: value };
@@ -41,27 +40,23 @@ $$('.field').forEach((box) => {
 
   const apply = (v, fromSlider) => {
     state[field] = v;
-    if (!fromSlider) slider.value = v;            // Browser klemmt Slider auf [min,max]
+    if (!fromSlider) slider.value = v;
     valInput.value = disp(v);
     recompute();
   };
-
   slider.addEventListener('input', () => apply(num(slider.value), true));
   valInput.addEventListener('input', () => { state[field] = num(valInput.value); slider.value = state[field]; recompute(); });
   valInput.addEventListener('blur', () => { valInput.value = disp(state[field]); });
   $$('.step', box).forEach((btn) => btn.addEventListener('click', () => {
-    const dir = num(btn.dataset.dir);
-    let v = round2(num(state[field]) + dir * step);
+    let v = round2(num(state[field]) + num(btn.dataset.dir) * step);
     if (v < min) v = min;
     apply(v, false);
   }));
 });
-
 function initFields() {
   for (const field in fieldEls) {
-    const { valInput, slider } = fieldEls[field];
-    valInput.value = disp(state[field]);
-    slider.value = state[field];
+    fieldEls[field].valInput.value = disp(state[field]);
+    fieldEls[field].slider.value = state[field];
   }
 }
 
@@ -96,15 +91,13 @@ function bindSelect(id, key) {
   const el = $('#' + id);
   el.addEventListener('change', () => { state[key] = el.value; recompute(); });
 }
-function bindNumber(id, key, transform = (v) => v) {
+function bindNumber(id, key) {
   const el = $('#' + id);
-  el.addEventListener('input', () => { state[key] = transform(num(el.value)); recompute(); });
+  el.addEventListener('input', () => { state[key] = num(el.value); recompute(); });
 }
-bindSelect('schneeSpur', 'schneeSpur');
-bindSelect('gruppe', 'gruppe');
+['schneeSpur', 'lawine', 'sicherung', 'wind', 'gruppe'].forEach((id) => bindSelect(id, id));
 bindNumber('mittlereHoehe', 'mittlereHoehe');
 bindNumber('pauseAuto', 'pauseAutoMinProStunde');
-
 $('#startzeit').addEventListener('input', () => { state.startzeit = $('#startzeit').value; recompute(); });
 
 // ---------- Pausen-Liste ----------
@@ -115,8 +108,8 @@ function renderPausen() {
     const row = document.createElement('div');
     row.className = 'pause-item';
     row.innerHTML =
-      `<input class="p-name" type="text" placeholder="Pause" value="${(p.name || '').replace(/"/g, '&quot;')}" />` +
-      `<input class="p-min" type="number" inputmode="numeric" value="${num(p.dauerMin)}" /> ` +
+      `<input class="p-name" type="text" placeholder="Pause" value="${esc(p.name || '')}" />` +
+      `<input class="p-min" type="number" inputmode="numeric" value="${num(p.dauerMin)}" />` +
       `<button class="pause-del" type="button" aria-label="entfernen">×</button>`;
     $('.p-name', row).addEventListener('input', (e) => { state.benanntePausen[i].name = e.target.value; saveState(state); });
     $('.p-min', row).addEventListener('input', (e) => { state.benanntePausen[i].dauerMin = num(e.target.value); recompute(); });
@@ -149,8 +142,7 @@ $('#pctHoriz').addEventListener('input', () => { setCfg('weight', 'pctPerKgHoriz
 $('#reset').addEventListener('click', () => { clearState(); location.reload(); });
 
 function initControls() {
-  $('#schneeSpur').value = state.schneeSpur;
-  $('#gruppe').value = state.gruppe;
+  ['schneeSpur', 'lawine', 'sicherung', 'wind', 'gruppe'].forEach((id) => { $('#' + id).value = state[id]; });
   $('#mittlereHoehe').value = state.mittlereHoehe;
   $('#pauseAuto').value = state.pauseAutoMinProStunde;
   $('#startzeit').value = state.startzeit || '';
@@ -170,18 +162,25 @@ function initControls() {
 // ---------- Berechnung & Ausgabe ----------
 const FAKTOR_LABEL = {
   gewichtAuf: 'Gewicht (Aufstieg)', schneeSpur: 'Schnee / Spur', hoehe: 'Höhenlage',
-  aktivitaet: 'Aktivität', gelaende: 'Gelände', witterung: 'Witterung', gruppe: 'Gruppe',
+  aktivitaet: 'Aktivität', gelaende: 'Gelände', witterung: 'Witterung', wind: 'Wind / Kälte',
+  sicherung: 'Trittsicherheit / Material', lawine: 'Lawine', gruppe: 'Gruppe',
 };
 
-function recompute() {
-  const r = computeTour({
-    hmAuf: num(state.hmAuf), hmAb: num(state.hmAb), distKm: num(state.distKm), gewichtKg: num(state.gewichtKg),
+function buildInput() {
+  return {
+    hmAuf: num(state.hmAuf), hmAb: num(state.hmAb),
+    distAufKm: num(state.distAufKm), distAbKm: num(state.distAbKm),
+    gewichtKg: num(state.gewichtKg),
     aktivitaet: state.aktivitaet, schneeSpur: state.schneeSpur, gelaende: state.gelaende,
-    witterung: state.witterung, gruppe: state.gruppe, mittlereHoehe: num(state.mittlereHoehe),
+    witterung: state.witterung, wind: state.wind, sicherung: state.sicherung, lawine: state.lawine,
+    gruppe: state.gruppe, mittlereHoehe: num(state.mittlereHoehe),
     pauseAutoMinProStunde: num(state.pauseAutoMinProStunde), benanntePausen: state.benanntePausen,
     startzeit: state.startzeit || null, useSac: !!state.useSac, config: state.config || {},
-  });
+  };
+}
 
+function recompute() {
+  const r = computeTour(buildInput());
   $('#netto').textContent = r.nettoHM;
   $('#brutto').textContent = r.bruttoHM;
   const ankunftRow = $('#ankunftRow');
@@ -189,6 +188,8 @@ function recompute() {
   else ankunftRow.hidden = true;
 
   renderBreakdown(r);
+  renderSummary(r);
+  renderWarnungen(r);
   saveState(state);
 }
 
@@ -197,21 +198,50 @@ function bdRow(label, value) { return `<div class="bd-row"><span>${label}</span>
 function renderBreakdown(r) {
   const a = r.aufschluesselung;
   const f = a.faktoren;
-  let html = '<div class="bd-head">Komponenten (roh → mit Faktoren)</div>';
-  html += bdRow('Aufstieg', `${formatHM(a.tAuf)} → ${formatHM(a.tAufAdj)}`);
-  html += bdRow('Abstieg', `${formatHM(a.tAb)} → ${formatHM(a.tAbAdj)}`);
-  html += bdRow('Horizontal', `${formatHM(a.tHoriz)} → ${formatHM(a.tHorizAdj)}`);
-  html += bdRow('Gehzeit (kombiniert)', formatHM(a.gehzeitBasis));
+  let html = '<div class="bd-head">Etappen (Höhe / Strecke → kombiniert)</div>';
+  html += bdRow('Aufstieg', `${formatHM(a.tAuf)} / ${formatHM(a.tHorizAuf)} → ${formatHM(a.aufstiegZeit)}`);
+  html += bdRow('Abstieg', `${formatHM(a.tAb)} / ${formatHM(a.tHorizAb)} → ${formatHM(a.abstiegZeit)}`);
+  html += bdRow('Gehzeit (Basis)', formatHM(a.gehzeitBasis));
 
   html += '<div class="bd-head">Globale Faktoren</div>';
-  const keys = ['gewichtAuf', 'schneeSpur', 'hoehe', 'aktivitaet', 'gelaende', 'witterung', 'gruppe'];
-  for (const k of keys) html += bdRow(FAKTOR_LABEL[k], '×' + f[k].toFixed(2));
-
+  for (const k of ['gewichtAuf', 'schneeSpur', 'hoehe', 'aktivitaet', 'gelaende', 'witterung', 'wind', 'sicherung', 'lawine', 'gruppe']) {
+    if (f[k] !== undefined) html += bdRow(FAKTOR_LABEL[k], '×' + f[k].toFixed(2));
+  }
   html += '<div class="bd-head">Pausen</div>';
   html += bdRow('Automatisch', r.pauseAutoHM);
   html += bdRow('Geplant', r.pauseBenanntHM);
-
   $('#breakdownBody').innerHTML = html;
+}
+
+function legRow(name, detail, time) {
+  return `<div class="sum-leg"><div><div class="leg-name">${name}</div><div class="leg-detail">${detail}</div></div><div class="leg-time">${time}</div></div>`;
+}
+
+function renderSummary(r) {
+  const a = r.aufschluesselung;
+  const pauseGesamt = formatHM(a.pauseAuto + a.pauseBenannt);
+  const c = effConfig();
+  const vAuf = state.useSac ? c.sac.vAuf : c.speeds.vAuf;
+  const vAb = state.aktivitaet === 'skitour' ? c.speeds.vSki : (state.useSac ? c.sac.vAb : c.speeds.vAb);
+  const vHoriz = state.useSac ? c.sac.vHoriz : c.speeds.vHoriz;
+  const preset = state.useSac ? 'SAC' : 'DAV';
+
+  let html = '';
+  html += legRow('Aufstieg', `${disp(state.hmAuf)} Hm · ${disp(state.distAufKm)} km`, r.aufstiegNettoHM);
+  html += legRow('Abstieg', `${disp(state.hmAb)} Hm · ${disp(state.distAbKm)} km`, r.abstiegNettoHM);
+  html += legRow('Gehzeit (netto)', 'Auf- + Abstieg', r.nettoHM);
+  html += legRow('Pausen', `${num(state.pauseAutoMinProStunde)} Min/Std + geplant`, pauseGesamt);
+  html += `<div class="sum-total"><div class="leg-name">Tourdauer</div><div class="leg-time">${r.bruttoHM}</div></div>`;
+  if (r.ankunft) html += legRow('Ankunft', `Start ${state.startzeit} Uhr`, r.ankunft);
+  html += `<div class="sum-meta">Tempo (${preset}): Aufstieg ${vAuf} Hm/h · Abstieg ${vAb} Hm/h · Horizontal ${vHoriz} km/h · Gewicht ${disp(state.gewichtKg)} kg</div>`;
+  $('#summaryBody').innerHTML = html;
+}
+
+function renderWarnungen(r) {
+  const box = $('#warnungen');
+  if (!r.warnungen || !r.warnungen.length) { box.hidden = true; box.innerHTML = ''; return; }
+  box.hidden = false;
+  box.innerHTML = r.warnungen.map((w) => `<div class="warn">${esc(w)}</div>`).join('');
 }
 
 // ---------- Start ----------
