@@ -34,6 +34,7 @@ function effConfig() { return mergeConfig(DEFAULTS, state.config || {}); }
 const fieldEls = {};
 $$('.field').forEach((box) => {
   const field = box.dataset.field;
+  if (!field) return; // Parameter-Felder (data-cfg) werden separat verdrahtet
   const min = num(box.dataset.min);
   const step = num(box.dataset.step) || 1;
   const valInput = $('.val', box);
@@ -190,21 +191,49 @@ function showGpxNote(msg, isError) {
   el.classList.toggle('error', !!isError);
 }
 
-// ---------- Experten ----------
+// ---------- Experten: Parameter als Auswahl-Controls (Stepper + Slider) ----------
 const useSac = $('#useSac');
-const sacLocked = ['vAuf', 'vAb', 'vHoriz'];
-useSac.addEventListener('change', () => {
-  state.useSac = useSac.checked;
-  sacLocked.forEach((id) => { $('#' + id).disabled = useSac.checked; });
-  recompute();
+const SAC_LOCK = ['speeds.vAuf', 'speeds.vAb', 'speeds.vHoriz'];
+const paramBoxes = [];
+const clamp = (v, lo, hi) => (v < lo ? lo : (v > hi ? hi : v));
+
+$$('.field[data-cfg]').forEach((box) => {
+  const path = box.dataset.cfg;
+  const [sec, key] = path.split('.');
+  const min = num(box.dataset.min);
+  const max = num(box.dataset.max);
+  const step = num(box.dataset.step) || 1;
+  const scale = num(box.dataset.scale) || 1;
+  const valInput = $('.val', box);
+  const slider = $('.slider', box);
+  slider.min = min; slider.max = max; slider.step = step;
+
+  const show = (display) => { valInput.value = disp(display); slider.value = display; };
+  const apply = (display) => { setCfg(sec, key, display / scale); recompute(); };
+
+  slider.addEventListener('input', () => { const v = num(slider.value); valInput.value = disp(v); apply(v); });
+  valInput.addEventListener('input', () => { const v = num(valInput.value); slider.value = v; apply(v); });
+  valInput.addEventListener('blur', () => { show(clamp(num(valInput.value), min, max)); });
+  $$('.step', box).forEach((btn) => btn.addEventListener('click', () => {
+    const v = clamp(round2(num(valInput.value) + num(btn.dataset.dir) * step), min, max);
+    show(v); apply(v);
+  }));
+
+  paramBoxes.push({ box, path, sec, key, scale, valInput, slider, show });
 });
-$('#vAuf').addEventListener('input', () => { setCfg('speeds', 'vAuf', num($('#vAuf').value)); recompute(); });
-$('#vAb').addEventListener('input', () => { setCfg('speeds', 'vAb', num($('#vAb').value)); recompute(); });
-$('#vHoriz').addEventListener('input', () => { setCfg('speeds', 'vHoriz', num($('#vHoriz').value)); recompute(); });
-$('#vSki').addEventListener('input', () => { setCfg('speeds', 'vSki', num($('#vSki').value)); recompute(); });
-$('#basislast').addEventListener('input', () => { setCfg('weight', 'basislast', num($('#basislast').value)); recompute(); });
-$('#pctAuf').addEventListener('input', () => { setCfg('weight', 'pctPerKgAuf', num($('#pctAuf').value) / 100); recompute(); });
-$('#pctHoriz').addEventListener('input', () => { setCfg('weight', 'pctPerKgHoriz', num($('#pctHoriz').value) / 100); recompute(); });
+
+function updateSacLock() {
+  const off = !!state.useSac;
+  paramBoxes.forEach((p) => {
+    if (!SAC_LOCK.includes(p.path)) return;
+    p.box.classList.toggle('locked', off);
+    p.valInput.disabled = off;
+    p.slider.disabled = off;
+    $$('.step', p.box).forEach((b) => { b.disabled = off; });
+  });
+}
+
+useSac.addEventListener('change', () => { state.useSac = useSac.checked; updateSacLock(); recompute(); });
 $('#reset').addEventListener('click', () => { clearState(); location.reload(); });
 
 function initControls() {
@@ -214,14 +243,8 @@ function initControls() {
   $('#startzeit').value = state.startzeit || '';
   useSac.checked = !!state.useSac;
   const c = effConfig();
-  $('#vAuf').value = c.speeds.vAuf;
-  $('#vAb').value = c.speeds.vAb;
-  $('#vHoriz').value = c.speeds.vHoriz;
-  $('#vSki').value = c.speeds.vSki;
-  $('#basislast').value = c.weight.basislast;
-  $('#pctAuf').value = round2(c.weight.pctPerKgAuf * 100);
-  $('#pctHoriz').value = round2(c.weight.pctPerKgHoriz * 100);
-  sacLocked.forEach((id) => { $('#' + id).disabled = !!state.useSac; });
+  paramBoxes.forEach((p) => p.show(round2(c[p.sec][p.key] * p.scale)));
+  updateSacLock();
   $$('.segmented').forEach(syncSegmented);
 }
 

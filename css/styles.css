@@ -145,6 +145,15 @@ body {
   background: var(--accent); cursor: pointer;
 }
 
+/* kompakte Parameter-Felder (Experten) */
+.field.param { padding: 10px 12px 11px; }
+.field.param .field-head label { font-size: 0.92rem; font-weight: 600; }
+.field.param .field-value input { font-size: 1.2rem; }
+.field.param .field-controls { margin-top: 8px; grid-template-columns: 40px 1fr 40px; gap: 10px; }
+.field.param .step { width: 40px; height: 40px; font-size: 1.3rem; }
+.field.locked { opacity: 0.45; }
+.field.locked .slider, .field.locked .step, .field.locked .val { pointer-events: none; }
+
 /* ---------- Sections (details) ---------- */
 .section { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
 .section > summary {

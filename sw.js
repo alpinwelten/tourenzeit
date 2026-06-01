@@ -1,5 +1,5 @@
 // Service Worker — App-Shell cache-first für vollständige Offline-Nutzung.
-const CACHE = 'tourenzeit-v4';
+const CACHE = 'tourenzeit-v5';
 const ASSETS = [
   '.', 'index.html', 'css/styles.css',
   'js/engine.mjs', 'js/ui.mjs', 'js/gpx.mjs', 'js/storage.mjs', 'js/sw-register.mjs',

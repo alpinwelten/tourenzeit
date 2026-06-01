@@ -248,18 +248,35 @@
         </label>
 
         <p class="hint">Deine Leistung pro Stunde</p>
-        <div class="grid2">
-          <div class="row inline"><label class="row-label" for="vAuf">Aufstieg</label><div class="field-value"><input id="vAuf" type="number" value="300" /><span class="unit">Hm/h</span></div></div>
-          <div class="row inline"><label class="row-label" for="vAb">Abstieg</label><div class="field-value"><input id="vAb" type="number" value="500" /><span class="unit">Hm/h</span></div></div>
-          <div class="row inline"><label class="row-label" for="vHoriz">Horizontal</label><div class="field-value"><input id="vHoriz" type="number" value="4" /><span class="unit">km/h</span></div></div>
-          <div class="row inline"><label class="row-label" for="vSki">Abfahrt (Ski)</label><div class="field-value"><input id="vSki" type="number" value="1500" /><span class="unit">Hm/h</span></div></div>
+        <div class="field param" data-cfg="speeds.vAuf" data-min="100" data-max="600" data-step="10">
+          <div class="field-head"><label>Aufstieg</label><div class="field-value"><input class="val" type="number" inputmode="numeric" /><span class="unit">Hm/h</span></div></div>
+          <div class="field-controls"><button class="step" data-dir="-1" aria-label="weniger">−</button><input class="slider" type="range" /><button class="step" data-dir="1" aria-label="mehr">+</button></div>
+        </div>
+        <div class="field param" data-cfg="speeds.vAb" data-min="200" data-max="1200" data-step="25">
+          <div class="field-head"><label>Abstieg</label><div class="field-value"><input class="val" type="number" inputmode="numeric" /><span class="unit">Hm/h</span></div></div>
+          <div class="field-controls"><button class="step" data-dir="-1" aria-label="weniger">−</button><input class="slider" type="range" /><button class="step" data-dir="1" aria-label="mehr">+</button></div>
+        </div>
+        <div class="field param" data-cfg="speeds.vHoriz" data-min="2" data-max="7" data-step="0.5">
+          <div class="field-head"><label>Horizontal</label><div class="field-value"><input class="val" type="number" inputmode="decimal" /><span class="unit">km/h</span></div></div>
+          <div class="field-controls"><button class="step" data-dir="-1" aria-label="weniger">−</button><input class="slider" type="range" /><button class="step" data-dir="1" aria-label="mehr">+</button></div>
+        </div>
+        <div class="field param" data-cfg="speeds.vSki" data-min="600" data-max="3000" data-step="100">
+          <div class="field-head"><label>Abfahrt (Ski)</label><div class="field-value"><input class="val" type="number" inputmode="numeric" /><span class="unit">Hm/h</span></div></div>
+          <div class="field-controls"><button class="step" data-dir="-1" aria-label="weniger">−</button><input class="slider" type="range" /><button class="step" data-dir="1" aria-label="mehr">+</button></div>
         </div>
 
         <p class="hint">Gewichts-Kalibrierung</p>
-        <div class="grid2">
-          <div class="row inline"><label class="row-label" for="basislast">Basislast</label><div class="field-value"><input id="basislast" type="number" value="8" /><span class="unit">kg</span></div></div>
-          <div class="row inline"><label class="row-label" for="pctAuf">Aufstieg</label><div class="field-value"><input id="pctAuf" type="number" step="0.1" value="2" /><span class="unit">%/kg</span></div></div>
-          <div class="row inline"><label class="row-label" for="pctHoriz">Horizontal</label><div class="field-value"><input id="pctHoriz" type="number" step="0.1" value="0.5" /><span class="unit">%/kg</span></div></div>
+        <div class="field param" data-cfg="weight.basislast" data-min="0" data-max="25" data-step="1">
+          <div class="field-head"><label>Basislast</label><div class="field-value"><input class="val" type="number" inputmode="numeric" /><span class="unit">kg</span></div></div>
+          <div class="field-controls"><button class="step" data-dir="-1" aria-label="weniger">−</button><input class="slider" type="range" /><button class="step" data-dir="1" aria-label="mehr">+</button></div>
+        </div>
+        <div class="field param" data-cfg="weight.pctPerKgAuf" data-scale="100" data-min="0" data-max="5" data-step="0.1">
+          <div class="field-head"><label>Aufstieg</label><div class="field-value"><input class="val" type="number" inputmode="decimal" /><span class="unit">%/kg</span></div></div>
+          <div class="field-controls"><button class="step" data-dir="-1" aria-label="weniger">−</button><input class="slider" type="range" /><button class="step" data-dir="1" aria-label="mehr">+</button></div>
+        </div>
+        <div class="field param" data-cfg="weight.pctPerKgHoriz" data-scale="100" data-min="0" data-max="3" data-step="0.1">
+          <div class="field-head"><label>Horizontal</label><div class="field-value"><input class="val" type="number" inputmode="decimal" /><span class="unit">%/kg</span></div></div>
+          <div class="field-controls"><button class="step" data-dir="-1" aria-label="weniger">−</button><input class="slider" type="range" /><button class="step" data-dir="1" aria-label="mehr">+</button></div>
         </div>
 
         <button id="reset" class="btn-reset" type="button">Auf Standard zurücksetzen</button>
