@@ -24,6 +24,15 @@ const DEFAULT_STATE = {
 
 let state = loadState(DEFAULT_STATE);
 
+// Slider-Füllstand (linker Track-Anteil in Markenfarbe) — rein kosmetisch
+function syncFill(slider) {
+  const min = num(slider.min);
+  const max = num(slider.max);
+  const v = num(slider.value);
+  const pct = max > min ? ((v - min) / (max - min)) * 100 : 0;
+  slider.style.setProperty('--fill', Math.min(100, Math.max(0, pct)).toFixed(1) + '%');
+}
+
 function setCfg(section, key, value) {
   state.config = state.config || {};
   state.config[section] = { ...(state.config[section] || {}), [key]: value };
@@ -45,10 +54,11 @@ $$('.field').forEach((box) => {
     state[field] = v;
     if (!fromSlider) slider.value = v;
     valInput.value = disp(v);
+    syncFill(slider);
     recompute();
   };
   slider.addEventListener('input', () => apply(num(slider.value), true));
-  valInput.addEventListener('input', () => { state[field] = num(valInput.value); slider.value = state[field]; recompute(); });
+  valInput.addEventListener('input', () => { state[field] = num(valInput.value); slider.value = state[field]; syncFill(slider); recompute(); });
   valInput.addEventListener('blur', () => { valInput.value = disp(state[field]); });
   $$('.step', box).forEach((btn) => btn.addEventListener('click', () => {
     let v = round2(num(state[field]) + num(btn.dataset.dir) * step);
@@ -60,6 +70,7 @@ function initFields() {
   for (const field in fieldEls) {
     fieldEls[field].valInput.value = disp(state[field]);
     fieldEls[field].slider.value = state[field];
+    syncFill(fieldEls[field].slider);
   }
 }
 
@@ -111,8 +122,8 @@ function renderPausen() {
     const row = document.createElement('div');
     row.className = 'pause-item';
     row.innerHTML =
-      `<input class="p-name" type="text" placeholder="Pause" value="${esc(p.name || '')}" />` +
-      `<input class="p-min" type="number" inputmode="numeric" value="${num(p.dauerMin)}" />` +
+      `<input class="p-name" type="text" placeholder="Pause" aria-label="Name der Pause" value="${esc(p.name || '')}" />` +
+      `<input class="p-min" type="number" inputmode="numeric" aria-label="Dauer in Minuten" value="${num(p.dauerMin)}" />` +
       `<button class="pause-del" type="button" aria-label="entfernen">×</button>`;
     $('.p-name', row).addEventListener('input', (e) => { state.benanntePausen[i].name = e.target.value; saveState(state); });
     $('.p-min', row).addEventListener('input', (e) => { state.benanntePausen[i].dauerMin = num(e.target.value); recompute(); });
@@ -208,11 +219,11 @@ $$('.field[data-cfg]').forEach((box) => {
   const slider = $('.slider', box);
   slider.min = min; slider.max = max; slider.step = step;
 
-  const show = (display) => { valInput.value = disp(display); slider.value = display; };
+  const show = (display) => { valInput.value = disp(display); slider.value = display; syncFill(slider); };
   const apply = (display) => { setCfg(sec, key, display / scale); recompute(); };
 
-  slider.addEventListener('input', () => { const v = num(slider.value); valInput.value = disp(v); apply(v); });
-  valInput.addEventListener('input', () => { const v = num(valInput.value); slider.value = v; apply(v); });
+  slider.addEventListener('input', () => { const v = num(slider.value); valInput.value = disp(v); syncFill(slider); apply(v); });
+  valInput.addEventListener('input', () => { const v = num(valInput.value); slider.value = v; syncFill(slider); apply(v); });
   valInput.addEventListener('blur', () => { show(clamp(num(valInput.value), min, max)); });
   $$('.step', box).forEach((btn) => btn.addEventListener('click', () => {
     const v = clamp(round2(num(valInput.value) + num(btn.dataset.dir) * step), min, max);
@@ -279,10 +290,96 @@ function recompute() {
   renderBreakdown(r);
   renderSummary(r);
   renderWarnungen(r);
+  renderLineal(r);
+  updateSummaryChips(r);
   saveState(state);
 }
 
-function bdRow(label, value) { return `<div class="bd-row"><span>${label}</span><strong>${value}</strong></div>`; }
+// ---------- Marschzeit-Lineal (Zusammenfassung) ----------
+// Trägt die Tour proportional ab: Aufstieg · Abstieg · Pausen, Bronze-Raute = Tourende.
+function renderLineal(r) {
+  const el = $('#lineal');
+  if (!el) return;
+  const a = r.aufschluesselung;
+  const total = r.brutto;
+  if (!Number.isFinite(total) || total <= 0) { el.hidden = true; el.innerHTML = ''; return; }
+  el.hidden = false;
+  const globalF = a.gehzeitBasis > 0 ? r.netto / a.gehzeitBasis : 1;
+  const seg = [
+    { cls: 'ln-auf', t: a.aufstiegZeit * globalF },
+    { cls: 'ln-ab', t: a.abstiegZeit * globalF },
+    { cls: 'ln-pause', t: a.pauseAuto + a.pauseBenannt },
+  ].filter((s) => s.t > 0.001);
+  let html = '<div class="ln-bar">' +
+    seg.map((s) => `<span class="${s.cls}" style="flex-grow:${(s.t / total).toFixed(4)}"></span>`).join('') +
+    '</div>';
+  const stepH = total > 24 ? Math.ceil(total / 12) : (total > 12 ? 2 : 1);
+  let ticks = '';
+  for (let h = stepH; h < total; h += stepH) {
+    ticks += `<span class="ln-tick" style="left:${((h / total) * 100).toFixed(2)}%"><i></i>${h}</span>`;
+  }
+  html += `<div class="ln-scale">${ticks}</div>`;
+  const ziel = r.ankunft ? `${r.ankunft} Uhr` : `${r.bruttoHM} h`;
+  html += `<div class="ln-ziel"><span class="ln-raute"></span>${esc(ziel)}</div>`;
+  el.innerHTML = html;
+}
+
+// ---------- Aktiv-Chips an den Sektions-Summaries ----------
+// Macht persistierte Abweichungen vom Standard sichtbar, ohne die Sektion zu öffnen.
+const CHIP_LABEL = {
+  aktivitaet: { bergsteigen: 'Bergsteigen', skitour: 'Skitour' },
+  schneeSpur: { wenigSpur: 'wenig Schnee', vielSpur: 'viel Schnee', vielSpuranlage: 'Spuranlage', tiefschneeSpuranlage: 'Tiefschnee' },
+  sicherung: { steigeisen: 'Steigeisen', seilGelegentlich: 'Seil', seillaengen: 'Seillängen' },
+  witterung: { nebel: 'Nebel', naesse: 'Nässe', dunkelheit: 'Dunkelheit' },
+  wind: { maessig: 'Wind mäßig', stark: 'Wind stark', sturm: 'Sturm' },
+  gruppe: { klein: 'Gruppe 3–5', gross: 'Gruppe 6+', heterogen: 'heterogen' },
+};
+const chipHtml = (t, cls) => `<span class="chip${cls ? ' ' + cls : ''}">${esc(t)}</span>`;
+
+function updateSummaryChips(r) {
+  const bed = $('#bedingungenChips');
+  if (bed) {
+    const chips = [];
+    if (state.aktivitaet !== 'wandern') chips.push(CHIP_LABEL.aktivitaet[state.aktivitaet] || state.aktivitaet);
+    if (state.gelaende !== 'T1') chips.push(state.gelaende);
+    if (state.schneeSpur !== 'aper') chips.push(CHIP_LABEL.schneeSpur[state.schneeSpur] || 'Schnee');
+    if (state.lawine !== 'na') chips.push('LWS ' + state.lawine.slice(1));
+    if (state.sicherung !== 'kein') chips.push(CHIP_LABEL.sicherung[state.sicherung] || state.sicherung);
+    (state.witterung || []).forEach((w) => chips.push(CHIP_LABEL.witterung[w] || w));
+    if (state.wind !== 'windstill') chips.push(CHIP_LABEL.wind[state.wind] || state.wind);
+    if (state.gruppe !== 'solo') chips.push(CHIP_LABEL.gruppe[state.gruppe] || state.gruppe);
+    if (num(state.mittlereHoehe) > 2000) chips.push(disp(state.mittlereHoehe) + ' m');
+    const MAX = 3;
+    const shown = chips.slice(0, MAX);
+    let html = shown.map((c) => chipHtml(c)).join('');
+    if (chips.length > MAX) html += chipHtml('+' + (chips.length - MAX));
+    if (chips.length) {
+      const a = r.aufschluesselung;
+      const globalF = a.gehzeitBasis > 0 ? r.netto / a.gehzeitBasis : 1;
+      html += chipHtml('×' + globalF.toFixed(2).replace('.', ','), 'chip-faktor');
+    }
+    bed.innerHTML = html;
+  }
+
+  const pa = $('#pausenChips');
+  if (pa) {
+    const parts = [];
+    if (num(state.pauseAutoMinProStunde) !== 5) parts.push(disp(state.pauseAutoMinProStunde) + ' Min/Std');
+    const n = (state.benanntePausen || []).length;
+    if (n) parts.push(n + ' geplant');
+    pa.innerHTML = parts.map((c) => chipHtml(c)).join('');
+  }
+
+  const ex = $('#expertenChip');
+  if (ex) {
+    const cfg = state.config || {};
+    const angepasst = Object.keys(cfg).some((sec) => cfg[sec] && Object.keys(cfg[sec]).length);
+    const t = state.useSac ? 'SAC' : (angepasst ? 'angepasst' : '');
+    ex.innerHTML = t ? chipHtml(t) : '';
+  }
+}
+
+function bdRow(label, value, neutral) { return `<div class="bd-row${neutral ? ' bd-neutral' : ''}"><span>${label}</span><strong>${value}</strong></div>`; }
 
 function renderBreakdown(r) {
   const a = r.aufschluesselung;
@@ -294,7 +391,8 @@ function renderBreakdown(r) {
 
   html += '<div class="bd-head">Globale Faktoren</div>';
   for (const k of ['gewichtAuf', 'schneeSpur', 'hoehe', 'aktivitaet', 'gelaende', 'witterung', 'wind', 'sicherung', 'lawine', 'gruppe']) {
-    if (f[k] !== undefined) html += bdRow(FAKTOR_LABEL[k], '×' + f[k].toFixed(2));
+    // Faktoren ×1,00 treten zurück (bd-neutral) — nur Wirkendes fällt ins Auge
+    if (f[k] !== undefined) html += bdRow(FAKTOR_LABEL[k], '×' + f[k].toFixed(2), Math.abs(f[k] - 1) < 0.005);
   }
   html += '<div class="bd-head">Pausen</div>';
   html += bdRow('Automatisch', r.pauseAutoHM);
@@ -336,11 +434,15 @@ function renderSummary(r) {
   $('#summaryBody').innerHTML = html;
 }
 
+let lastWarnHtml = null;
 function renderWarnungen(r) {
   const box = $('#warnungen');
-  if (!r.warnungen || !r.warnungen.length) { box.hidden = true; box.innerHTML = ''; return; }
+  const html = (r.warnungen || []).map((w) => `<div class="warn">${esc(w)}</div>`).join('');
+  if (html === lastWarnHtml) return; // Live-Region nicht bei jedem Slider-Tick neu ansagen
+  lastWarnHtml = html;
+  if (!html) { box.hidden = true; box.innerHTML = ''; return; }
   box.hidden = false;
-  box.innerHTML = r.warnungen.map((w) => `<div class="warn">${esc(w)}</div>`).join('');
+  box.innerHTML = html;
 }
 
 // ---------- Start ----------
