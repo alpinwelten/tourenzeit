@@ -34,7 +34,7 @@ for (const n of SIZES) {
 
 // Maskable: Motiv in der Safe-Zone (~80 %), Hintergrund voll deckend.
 render(
-  `<!doctype html><meta charset=utf-8><body style="margin:0;background:#00474B"><div style="width:512px;height:512px;display:flex;align-items:center;justify-content:center"><img src="file://${svg}" width=412 height=412></div></body>`,
+  `<!doctype html><meta charset=utf-8><body style="margin:0;background:#006064"><div style="width:512px;height:512px;display:flex;align-items:center;justify-content:center"><img src="file://${svg}" width=412 height=412></div></body>`,
   join(root, 'icons', 'icon-maskable-512.png'), 512, 512);
 console.log('icon-maskable-512.png');
 
